@@ -1,5 +1,6 @@
 import ttt
 import pygame
+import time
 from assets import *
 
 pygame.init()
@@ -13,6 +14,8 @@ borderList = []
 XList = []
 OList = []
 turn = 1
+bot = True
+swapTurn = False
 
 for i in range(3):
 	boxList.extend([pygame.Rect(
@@ -66,25 +69,44 @@ def drawO(arr):
 while run:
 	display.fill((107, 192, 209))
 	for event in pygame.event.get():
+		xy = pygame.mouse.get_pos()
 		if event.type == pygame.QUIT:
 			run = False
-		# if event.type == pygame.KEYDOWN:
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			xy = pygame.mouse.get_pos()
-			for i in range(len(boxList)):
-				if boxList[i].collidepoint(xy):
-					if game.state[i] != '0':
-						break
-					if turn == 1:
-						game.state = game.place(i, turn)
-						XList.extend(makeX(boxList[i]))
-						turn = 2
-					else:
-						game.state = game.place(i, turn)
-						OList.append(makeO(boxList[i]))
-						turn = 1
-					game.display()
+			if bot:
+				if turn == 1:
+					for i in range(len(boxList)):
+						if boxList[i].collidepoint(xy):
+							if game.state[i] == '0':
+								game.state = game.place(i, turn)
+								XList.extend(makeX(boxList[i]))
+								swapTurn = True
+								game.display()
+			else:
+				for i in range(len(boxList)):
+					if boxList[i].collidepoint(xy):
+						if game.state[i] != '0':
+							break
+						if turn == 1:
+							game.place(i, turn)
+							XList.extend(makeX(boxList[i]))
+							swapTurn = True
+						else:
+							game.place(i, turn)
+							OList.append(makeO(boxList[i]))
+							swapTurn = True
+						game.display()
 
+	if bot and turn == 2:
+		time.sleep(1)
+		nextState = game.Osearch(game.state, 5)
+		print(nextState)
+		for i in range(len(nextState)):
+			if nextState[i] != game.state[i]:
+				game.place(i, turn)
+				OList.append(makeO(boxList[i]))
+				break
+		swapTurn = True
 
 	for i in boxList:
 		pygame.draw.rect(display, c_lightCyan, i)
@@ -94,7 +116,11 @@ while run:
 
 	drawX(XList)
 	drawO(OList)
-			
+
+	if swapTurn:
+		turn = 2 if turn == 1 else 1
+		swapTurn = False
+
 	pygame.display.flip()
 
 pygame.quit()
