@@ -10,65 +10,14 @@ pygame.display.set_caption("Tic Tac Toe")
 
 game = ttt.TTT()
 
-def makeX(rect):
-	len = rect.width
-	x1 = rect.x + int(len * 0.15)
-	y1 = rect.y + int(len * 0.15)
-	x2 = rect.x + int(len * 0.85)
-	y2 = rect.y + int(len * 0.85)
-	return [(x1, y1, x2, y2), (x1, y2, x2, y1)]
-
-def makeO(rect):
-	return (rect.center, int(rect.width * .425))
-
-def drawX(tup, width=5):
+def drawX(tup, width=defaultPointerWidth):
 	pygame.draw.line(display, c_black, (tup[0], tup[1]), (tup[2], tup[3]), width)
 
-def drawO(tup, width=4):
+def drawO(tup, width=defaultPointerWidth):
 	pygame.draw.circle(display, c_black, tup[0], tup[1], width)
 
-def makePointer(rect):
-	len = rect.width
-	x1 = rect.x + int(len * 0.25)
-	y1 = rect.y + int(len * 0.45)
-	x2 = rect.x + int(len * 0.65)
-	y2 = rect.y + int(len * 0.70)
-	x3 = x1
-	y3 = rect.y + int(len * 0.95)
-	return [(x1, y1, x2, y2), (x2, y2, x3, y3)]
-
-def drawMenuXO(pixels, XFirst):
-	menuX.clear()
-	menuO.clear()
-	for i in range(count):
-		menuXORect[i].top -= pixels
-		
-	rem_count = 0
-	for i in range(count):
-		if menuXORect[i].top < (-1.5) * menuXORect[i].height:
-			XFirst = not XFirst
-			rem_count += 1
-			continue;
-		break;
-		
-	for i in range(rem_count):
-		menuXORect.pop(0)
-		menuRect.top = menuXORect[-1].top + gap + menuXORect[-1].height
-		menuXORect.append(copy.copy(menuRect))
-
-	X = XFirst
-	for i in range(count):
-		if X:
-			X = not X
-			menuX.extend(makeX(menuXORect[i]))
-			
-		else:
-			X = not X
-			menuO.append(makeO(menuXORect[i]))
-	return XFirst
-
 while run:
-	display.fill((107, 192, 209))
+	display.fill(c_lightCyan)
 	for event in pygame.event.get():
 		xy = pygame.mouse.get_pos()
 		if event.type == pygame.QUIT:
@@ -81,7 +30,7 @@ while run:
 				elif r_cpu.collidepoint(xy):
 					menu = False
 					bot = True
-			else:
+			elif not end:
 				if bot:
 					if turn == 1:
 						for i in range(len(boxList)):
@@ -90,6 +39,12 @@ while run:
 									game.state = game.place(i, turn)
 									XList.extend(makeX(boxList[i]))
 									swapTurn = True
+									if game.end(1) != -1:
+										end = True
+									elif game.tie():
+										end = True
+										tie = True
+
 				else:
 					for i in range(len(boxList)):
 						if boxList[i].collidepoint(xy):
@@ -99,10 +54,40 @@ while run:
 								game.place(i, turn)
 								XList.extend(makeX(boxList[i]))
 								swapTurn = True
+								if game.end(1) != -1:
+									end = True
+								elif game.tie():
+									end = True
+									tie = True
 							else:
 								game.place(i, turn)
 								OList.append(makeO(boxList[i]))
 								swapTurn = True
+								if game.end(2) != -1:
+									end = True
+			else:
+				if r_endPointer.collidepoint(xy):
+					tie = False
+					end = False
+					menu = True
+					game = ttt.TTT()
+					turn = 1
+					swapTurn = False
+					XList.clear()
+					OList.clear()
+
+	if bot and turn == 2 and not end:
+		time.sleep(0.5)
+		nextState = game.Osearch(game.state, 4)
+		for i in range(len(nextState)):
+			if nextState[i] != game.state[i]:
+				game.place(i, turn)
+				OList.append(makeO(boxList[i]))
+				break
+		pygame.event.clear()
+		if game.end(2) != -1:
+			end = True
+		swapTurn = True
 	
 	if menu:
 		pointer = -1
@@ -119,9 +104,9 @@ while run:
 		display.blit(s_cpu, (p_menuText_left, p_menuCpu_top))
 		if pointer != -1:
 			for i in makePointer(pointerArray[pointer]):
-				drawX(i, 11)
+				drawX(i)
 
-		XFirst = drawMenuXO(pixels, XFirst)
+		XFirst = makeMenuXO(pixels, XFirst)
 		for i in menuX:
 			drawX(i)
 		for i in menuO:
@@ -129,28 +114,34 @@ while run:
 		pygame.display.flip()
 		continue
 
-	if bot and turn == 2:
-		time.sleep(0.5)
-		nextState = game.Osearch(game.state, 4)
-		for i in range(len(nextState)):
-			if nextState[i] != game.state[i]:
-				game.place(i, turn)
-				OList.append(makeO(boxList[i]))
-				break
-		swapTurn = True
+	if not menu:
+		for i in boxList:
+			pygame.draw.rect(display, c_lightCyan, i)
 
-	for i in boxList:
-		pygame.draw.rect(display, c_lightCyan, i)
+		for i in borderList:
+			pygame.draw.rect(display, c_white, i)
 
-	for i in borderList:
-		pygame.draw.rect(display, c_white, i)
+		for i in XList:
+			drawX(i, 2)
+		for i in OList:
+			drawO(i, 2)
 
-	for i in XList:
-		drawX(i, 2)
-	for i in OList:
-		drawO(i, 2)
+	if end:
+		if not tie:
+			if turn == 1:
+				pygame.draw.line(display, c_red, endLines[game.end(1) - 1][0], endLines[game.end(1) - 1][1], 3)
+			else:
+				pygame.draw.line(display, c_red, endLines[game.end(2) - 1][0], endLines[game.end(2) - 1][1], 3)
 
-	if swapTurn:
+		if r_endPointer.collidepoint(xy):
+			endPointerWidth = int(windowWidth / 50)
+		else:
+			endPointerWidth = defaultPointerWidth
+
+		for i in endPointer:
+			drawX(i, endPointerWidth)
+
+	if not end and swapTurn:
 		turn = 2 if turn == 1 else 1
 		swapTurn = False
 

@@ -169,4 +169,12 @@ class TTT:
 			s = state[:i] + str(pl) + state[i+1:]
 			l.append(s)
 		return l
+
+	def tie(self, state=None):
+		if state is None:
+			state = self.state
+		for i in self.state:
+			if i == '0':
+				return False
+		return True
 			
