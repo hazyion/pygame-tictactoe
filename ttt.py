@@ -8,6 +8,28 @@ class TTT:
 			'1' : 'x',
 			'2' : 'o'
 		}
+		self.endLookup = {
+			1 : (0, 1, 2),
+			2 : (3, 4, 5),
+			3 : (6, 7, 8),
+			4 : (0, 3, 6),
+			5 : (1, 4, 7),
+			6 : (2, 5, 8),
+			7 : (0, 4, 8),
+			8 : (2, 4, 6)
+		}
+
+		self.remLookup = {
+			0 : (1, 4, 7),
+			1 : (1, 5),
+			2 : (1, 6, 8),
+			3 : (2, 4),
+			4 : (2, 5, 7, 8),
+			5 : (2, 6),
+			6 : (3, 4, 8),
+			7 : (3, 5),
+			8 : (3, 6, 7)
+		}
 	
 	def place(self, pos, pl):
 		self.state = self.state[:pos] + str(pl) + self.state[pos+1:]
@@ -21,61 +43,16 @@ class TTT:
 		pl = str(pl)
 		result = -1
 
-		if state[0] != pl:
-			checklist.discard(1)
-			checklist.discard(4)
-			checklist.discard(7)
-		if state[2] != pl:
-			checklist.discard(1)
-			checklist.discard(6)
-			checklist.discard(8)
-		if state[6] != pl:
-			checklist.discard(3)
-			checklist.discard(4)
-			checklist.discard(8)
-		if state[8] != pl:
-			checklist.discard(3)
-			checklist.discard(6)
-			checklist.discard(7)
-		if state[4] != pl:
-			checklist.discard(2)
-			checklist.discard(5)
-			checklist.discard(7)
-			checklist.discard(8)
-
 		for i in checklist:
-			if i == 1:
-				if state[0] == pl and state[1] == pl and state[2] == pl:
-					result = 1
+			end = True
+			for j in self.endLookup[i]:
+				if state[j] != pl:
+					end = False
 					break
-			elif i == 2:
-				if state[3] == pl and state[4] == pl and state[5] == pl:
-					result = 2
-					break
-			elif i == 3:
-				if state[6] == pl and state[7] == pl and state[8] == pl:
-					result = 3
-					break
-			elif i == 4:
-				if state[0] == pl and state[3] == pl and state[6] == pl:
-					result = 4
-					break
-			elif i == 5:
-				if state[1] == pl and state[4] == pl and state[7] == pl:
-					result = 5
-					break
-			elif i == 6:
-				if state[2] == pl and state[5] == pl and state[8] == pl:
-					result = 6
-					break
-			elif i == 7:
-				if state[0] == pl and state[4] == pl and state[8] == pl:
-					result = 7
-					break
-			elif i == 8:
-				if state[2] == pl and state[4] == pl and state[6] == pl:
-					result = 8
-					break
+			if end:
+				result = i
+				break
+
 		return result
 
 	def display(self, state=None):
@@ -91,7 +68,7 @@ class TTT:
 		if self.end(1, state) != -1 or self.end(2, state) != -1 or d == 0:
 			return state
 		XbestState = state
-		minLoss = 11
+		minLoss = 9
 		for i in self.child(state, 1):
 			ObestState = self.Osearch(i, d-1)
 			if self.loss(ObestState, 1) < minLoss:
@@ -102,8 +79,8 @@ class TTT:
 	def Osearch(self, state, d):
 		if self.end(1, state) != -1 or self.end(2, state) != -1 or d == 0:
 			return state
-		minLoss = 11
 		ObestState = state
+		minLoss = 9
 		for i in self.child(state, 2):
 			XbestState = self.Xsearch(i, d-1)
 			if self.loss(XbestState, 2) < minLoss:
@@ -113,9 +90,9 @@ class TTT:
 
 	def loss(self, state, pl):
 		op = 2 if pl == 1 else 1
-		return self.lossFunction(state, op) - self.lossFunction(state, pl)
+		return self.gainFunction(state, op) - self.gainFunction(state, pl)
 
-	def lossFunction(self, state, pl):
+	def gainFunction(self, state, pl):
 		op = 2 if pl == 1 else 1
 		if self.end(pl, state) != -1:
 			return 8
@@ -125,40 +102,25 @@ class TTT:
 		pl = str(pl)
 		op = str(op)
 		checklist = set([i for i in range(1,9)])
+		end = False
 
-		if state[0] == op:
-			checklist.discard(1)
-			checklist.discard(4)
-			checklist.discard(7)
-		if state[2] == op:
-			checklist.discard(1)
-			checklist.discard(6)
-			checklist.discard(8)
-		if state[6] == op:
-			checklist.discard(3)
-			checklist.discard(4)
-			checklist.discard(8)
-		if state[8] == op:
-			checklist.discard(3)
-			checklist.discard(6)
-			checklist.discard(7)
-		if state[4] == op:
-			checklist.discard(2)
-			checklist.discard(5)
-			checklist.discard(7)
-			checklist.discard(8)
-		if state[1] == op:
-			checklist.discard(1)
-			checklist.discard(5)
-		if state[3] == op:
-			checklist.discard(2)
-			checklist.discard(4)
-		if state[5] == op:
-			checklist.discard(2)
-			checklist.discard(6)
-		if state[7] == op:
-			checklist.discard(3)
-			checklist.discard(5)
+		for i in self.endLookup.keys():
+			double = 0
+			for j in self.endLookup[i]:
+				if state[j] == pl:
+					double += 1
+				elif state[j] == op:
+					break
+			if double == 2:
+				if end:
+					return 7
+				else:
+					end = True
+			
+		for i in self.remLookup.keys():
+			if state[i] == op:
+				for j in self.remLookup[i]:
+					checklist.discard(j)
 
 		return len(checklist)
 
